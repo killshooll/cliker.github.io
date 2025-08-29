@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Клікер</title>
+  <style>
+    body {
+      margin:0; 
+      min-height:100vh; 
+      display:flex; 
+      flex-direction:column;
+      align-items:center; 
+      justify-content:center; 
+      background:#0f1724; 
+      font-family:sans-serif; 
+      color:#fff;
+      user-select:none;
+      overflow:hidden;
+    }
+    .wrapper {text-align:center;}
+    .counter {
+      font-size:56px; 
+      font-weight:700; 
+      margin-bottom:25px;
+    }
+    .stage {
+      position:relative;
+      display:inline-block;
+    }
+    .circle-btn {
+      width:250px; height:250px;
+      border-radius:50%;
+      border:none;
+      cursor:pointer;
+      background:url("logo.png") no-repeat center/cover;
+      box-shadow:0 12px 28px rgba(0,0,0,0.55);
+      transition:transform 0.1s ease;
+      outline:none;
+    }
+    .circle-btn:active { transform:scale(0.9); }
+    .circle-btn:focus { outline:none; }
+
+    .float {
+      position:absolute;
+      font-size:26px;
+      font-weight:bold;
+      color:#3b82f6;
+      pointer-events:none;
+      animation:floatUp 1.3s forwards;
+      text-shadow:0 2px 8px rgba(0,0,0,0.6);
+    }
+    @keyframes floatUp {
+      0% { transform:translateY(0); opacity:1; }
+      60% { transform:translateY(-55px); opacity:0.9; }
+      100% { transform:translateY(-110px); opacity:0; }
+    }
+
+    /* локальні ефекти */
+    .moon-glow {
+      position:absolute;
+      width:100px; height:100px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(255,255,200,0.8), transparent);
+      animation:fadeOut 1s forwards;
+      pointer-events:none;
+    }
+    .snowflake {
+      position:absolute;
+      font-size:24px;
+      color:white;
+      animation:fallSnow 1s forwards;
+      pointer-events:none;
+    }
+    .smoke {
+      position:absolute;
+      width:20px; height:20px;
+      background:rgba(200,200,200,0.5);
+      border-radius:50%;
+      animation:smokeRise 1.5s forwards;
+      pointer-events:none;
+    }
+    @keyframes fadeOut {
+      0% {opacity:1; transform:scale(1);}
+      100% {opacity:0; transform:scale(2);}
+    }
+    @keyframes fallSnow {
+      0% {opacity:1; transform:translateY(0);}
+      100% {opacity:0; transform:translateY(-60px);}
+    }
+    @keyframes smokeRise {
+      0% {opacity:0.7; transform:translateY(0) scale(1);}
+      100% {opacity:0; transform:translateY(-80px) scale(2);}
+    }
+
+    /* глобальні ефекти */
+    .effect-layer {
+      pointer-events:none;
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      overflow:hidden;
+      z-index:0;
+    }
+    .raindrop {
+      position:absolute;
+      width:2px; height:15px;
+      background:rgba(173,216,230,0.7);
+      animation:rainFall 1s linear infinite;
+    }
+    @keyframes rainFall {
+      0% {transform:translateY(-20px);}
+      100% {transform:translateY(100vh);}
+    }
+    .global-snowflake {
+      position:absolute;
+      color:white;
+      font-size:14px;
+      animation:globalSnow 5s linear infinite;
+    }
+    @keyframes globalSnow {
+      0% {transform:translateY(-20px);}
+      100% {transform:translateY(100vh);}
+    }
+    .flame {
+      position:absolute;
+      width:10px; height:30px;
+      background:orange;
+      border-radius:50%;
+      animation:flameFlicker 0.6s infinite alternate;
+    }
+    @keyframes flameFlicker {
+      from {transform:scaleY(1); opacity:0.8; background:orange;}
+      to {transform:scaleY(1.5); opacity:0.4; background:red;}
+    }
+
+    .achievement {
+      position:fixed;
+      bottom:35px;
+      left:50%;
+      transform:translateX(-50%);
+      background:#1e293b;
+      color:#fff;
+      padding:14px 24px;
+      border-radius:14px;
+      font-weight:bold;
+      font-size:20px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.5);
+      opacity:0;
+      animation:showAch 3s forwards;
+      z-index:10;
+    }
+    @keyframes showAch {
+      0% {opacity:0; transform:translate(-50%,25px);}
+      15% {opacity:1; transform:translate(-50%,0);}
+      85% {opacity:1; transform:translate(-50%,0);}
+      100% {opacity:0; transform:translate(-50%,25px);}
+    }
+
+    .settings {
+      position:fixed;
+      bottom:80px;
+      right:20px;
+      width:220px;
+      padding:15px;
+      background:#1e293b;
+      border-radius:12px;
+      display:none;
+      z-index:20;
+    }
+    .settings label {display:block; margin:8px 0 4px;}
+    .settings select, .settings input {
+      width:100%;
+      padding:5px;
+      border-radius:6px;
+      border:none;
+    }
+
+    #toggleSettings {
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      padding:14px 20px;
+      font-weight:bold;
+      border:none;
+      border-radius:50px;
+      background:#3b82f6;
+      color:#fff;
+      cursor:pointer;
+      box-shadow:0 4px 10px rgba(0,0,0,0.4);
+      z-index:20;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="counter" id="counter">0</div>
+    <div class="stage" id="stage">
+      <button class="circle-btn" id="clickBtn"></button>
+    </div>
+  </div>
+
+  <button id="toggleSettings">⚙️</button>
+
+  <div class="settings" id="settingsPanel">
+    <label for="colorSelect">Колір "+1":</label>
+    <select id="colorSelect">
+      <option value="#22c55e">Зелений</option>
+      <option value="#3b82f6" selected>Синій</option>
+      <option value="#000000">Чорний</option>
+      <option value="#ef4444">Червоний</option>
+      <option value="#f97316">Помаранчевий</option>
+      <option value="#eab308">Жовтий</option>
+      <option value="#a855f7">Фіолетовий</option>
+    </select>
+
+    <label for="circleSelect">Зображення круга:</label>
+    <select id="circleSelect">
+      <option value="logo.png" selected>Nurik</option>
+      <option value="logo2.png">Delta</option>
+      <option value="logo3.png">Араб кот</option>
+    </select>
+
+    <label for="effectSelect">Ефект кліку:</label>
+    <select id="effectSelect">
+      <option value="none" selected>Без ефекту</option>
+      <option value="moon">Вибух</option>
+      <option value="snow">Сніжинка</option>
+      <option value="smoke">Дим</option>
+    </select>
+
+    <label for="globalEffect">Глобальний ефект:</label>
+    <select id="globalEffect">
+      <option value="none" selected>Без ефекту</option>
+      <option value="rain">Дощ</option>
+      <option value="snow">Сніг</option>
+      <option value="fire">Вогонь</option>
+    </select>
+
+    <label for="sizeRange">Розмір кнопки (%):</label>
+    <input type="range" id="sizeRange" min="100" max="200" value="100">
+  </div>
+
+  <div id="effectLayer" class="effect-layer"></div>
+
+  <script>
+    const counterEl = document.getElementById("counter");
+    const btn = document.getElementById("clickBtn");
+    const stage = document.getElementById("stage");
+    const colorSelect = document.getElementById("colorSelect");
+    const circleSelect = document.getElementById("circleSelect");
+    const sizeRange = document.getElementById("sizeRange");
+    const toggleSettings = document.getElementById("toggleSettings");
+    const settingsPanel = document.getElementById("settingsPanel");
+    const effectSelect = document.getElementById("effectSelect");
+    const globalEffect = document.getElementById("globalEffect");
+    const effectLayer = document.getElementById("effectLayer");
+
+    let count = 0;
+    let floatColor = colorSelect.value;
+    let unlocked = new Set();
+    let baseSize = 250;
+    let clickEffect = "none";
+    let globalEffectType = "none";
+
+    const achievements = {
+      100: "Перший успіх",
+      300: "Тренована рука",
+      500: "Майстер натиску",
+      800: "Швидкий клік",
+      1000: "Легенда кліків",
+      2000: "Машина кліків",
+      5000: "Нескінченна сила",
+      10000: "Король кліків"
+    };
+
+    function updateCounter() { counterEl.textContent = count; }
+
+    function spawnFloat(x,y) {
+      const span = document.createElement("span");
+      span.className="float";
+      span.textContent="+1";
+      span.style.color=floatColor;
+      const rect = stage.getBoundingClientRect();
+      span.style.left = (x-rect.left-10)+"px";
+      span.style.top = (y-rect.top-20)+"px";
+      stage.appendChild(span);
+      setTimeout(()=> span.remove(),1300);
+    }
+
+    function spawnClickEffect(x,y) {
+      const rect = stage.getBoundingClientRect();
+      let el;
+      if (clickEffect==="moon") {
+        el=document.createElement("div");
+        el.className="moon-glow";
+      } else if (clickEffect==="snow") {
+        el=document.createElement("div");
+        el.className="snowflake";
+        el.textContent="❄";
+      } else if (clickEffect==="smoke") {
+        el=document.createElement("div");
+        el.className="smoke";
+      }
+      if(el){
+        el.style.left=(x-rect.left-30)+"px";
+        el.style.top=(y-rect.top-30)+"px";
+        stage.appendChild(el);
+        setTimeout(()=>el.remove(),1500);
+      }
+    }
+
+    function showAchievement(text) {
+      const div = document.createElement("div");
+      div.className="achievement";
+      div.textContent="🏆 Досягнення: " + text;
+      document.body.appendChild(div);
+      setTimeout(()=> div.remove(),3000);
+    }
+
+    function clickAction(x,y) {
+      count++;
+      updateCounter();
+      spawnFloat(x,y);
+      spawnClickEffect(x,y);
+      if (achievements[count] && !unlocked.has(count)) {
+        unlocked.add(count);
+        showAchievement(achievements[count]);
+      }
+    }
+
+    btn.addEventListener("click",(e)=>clickAction(e.clientX,e.clientY));
+
+    document.addEventListener("keydown",(e)=>{
+      if (e.code==="Space" || e.code==="Enter") {
+        const rect = stage.getBoundingClientRect();
+        clickAction(rect.left+rect.width/2, rect.top+rect.height/2);
+      }
+    });
+
+    colorSelect.addEventListener("change",()=>{ floatColor=colorSelect.value; });
+    circleSelect.addEventListener("change",()=>{ btn.style.background=`url(${circleSelect.value}) no-repeat center/cover`; });
+    sizeRange.addEventListener("input",()=>{
+      let percent = sizeRange.value;
+      let newSize = baseSize * (percent/100);
+      btn.style.width=newSize+"px";
+      btn.style.height=newSize+"px";
+    });
+    effectSelect.addEventListener("change",()=>{ clickEffect=effectSelect.value; });
+    toggleSettings.addEventListener("click",()=>{
+      settingsPanel.style.display = settingsPanel.style.display==="none" ? "block" : "none";
+    });
+
+    // глобальні ефекти
+    function clearGlobalEffect() { effectLayer.innerHTML=""; }
+    function spawnRain() {
+      clearGlobalEffect();
+      for(let i=0;i<80;i++){
+        const drop=document.createElement("div");
+        drop.className="raindrop";
+        drop.style.left=Math.random()*100+"%";
+        drop.style.animationDuration=(0.5+Math.random())+"s";
+        effectLayer.appendChild(drop);
+      }
+    }
+    function spawnSnow() {
+      clearGlobalEffect();
+      for(let i=0;i<50;i++){
+        const flake=document.createElement("div");
+        flake.className="global-snowflake";
+        flake.textContent="❄";
+        flake.style.left=Math.random()*100+"%";
+        flake.style.fontSize=(10+Math.random()*20)+"px";
+        flake.style.animationDuration=(3+Math.random()*5)+"s";
+        effectLayer.appendChild(flake);
+      }
+    }
+    function spawnFire() {
+      clearGlobalEffect();
+      for(let i=0;i<60;i++){
+        const f=document.createElement("div");
+        f.className="flame";
+        f.style.left=Math.random()*100+"%";
+        f.style.bottom="0";
+        f.style.animationDuration=(0.3+Math.random()*0.5)+"s";
+        effectLayer.appendChild(f);
+      }
+    }
+
+    globalEffect.addEventListener("change",()=>{
+      globalEffectType=globalEffect.value;
+      if(globalEffectType==="none") clearGlobalEffect();
+      if(globalEffectType==="rain") spawnRain();
+      if(globalEffectType==="snow") spawnSnow();
+      if(globalEffectType==="fire") spawnFire();
+    });
+  </script>
+</body>
+</html>
